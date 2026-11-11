@@ -16,7 +16,10 @@ function Join() {
     if (loading || !user || profile?.isActive !== true) return;
     let code = search.get("code") || search.get("join") || "";
     if (!code && typeof window !== "undefined") code = (window.location.hash.match(/code=([^&]+)/) || [])[1] || "";
-    if (!code) return setMissing(true);
+    if (!code) {
+      router.replace("/dashboard");
+      return;
+    }
     findMeeting(code).then((m) => (m ? router.replace(`/room/${m.id}`) : setMissing(true))).catch(() => setMissing(true));
   }, [search, router, user, profile, loading]);
   if (!loading && !user) return <SignIn />;

@@ -75,7 +75,8 @@ export default function Shell({ children }) {
   }, []);
 
   useEffect(() => {
-    if (restricted && !["/join", "/settings"].includes(pathname) && !pathname.startsWith("/room/")) router.replace("/join");
+    const allowed = ["/dashboard", "/meetings", "/join", "/settings"];
+    if (restricted && !allowed.includes(pathname) && !pathname.startsWith("/room/")) router.replace("/dashboard");
   }, [restricted, pathname, router]);
 
   if (loading)
@@ -111,7 +112,12 @@ export default function Shell({ children }) {
 
   const admin = isAdmin(user, profile);
   const nav = restricted
-    ? [["/join", "Join Meeting", LogIn], ["/settings#profile", "Profile", Users]]
+    ? [
+        ["/dashboard", "Home", House],
+        ["/meetings", "Meetings", CalendarDays],
+        ["/join", "Join Meeting", LogIn],
+        ["/settings#profile", "Profile", Users],
+      ]
     : [...STAFF_NAV.filter(([href]) => !["/minutes", "/recordings"].includes(href) || isBoard(profile)), ...(admin ? [["/admin", "Admin", ShieldCheck]] : [])];
   const mobileNav = restricted ? [...nav, ["/settings", "Settings", Settings]] : nav;
   const name = displayName(user, profile);
