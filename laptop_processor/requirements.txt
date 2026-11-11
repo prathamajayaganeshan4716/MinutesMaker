@@ -1,0 +1,9 @@
+faster-whisper
+pyannote.audio
+firebase-admin
+ollama
+fastapi
+uvicorn
+python-dotenv
+python-multipart
+transformers

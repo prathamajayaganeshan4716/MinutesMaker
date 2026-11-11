@@ -1,0 +1,29 @@
+{
+  "name": "web_dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "node --test src/lib/permissions.test.js"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.14",
+    "firebase": "^13.0.0",
+    "firebase-admin": "^14.5.0",
+    "fix-webm-duration": "^1.0.6",
+    "lucide-react": "^1.57.0",
+    "next": "16.2.12",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.12",
+    "tailwindcss": "^4"
+  },
+  "type": "module"
+}

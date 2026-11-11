@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function configuredSuper() {
+      return signedIn() && profile().role == 'super_admin'
+        && profile().get('email', '') in ['prathamaj@karunya.edu.in', 'matrixkarunya@gmail.com'];
+    }
+    function active() {
+      return signedIn() && profile().get('isActive', false) == true
+        && (!get(/databases/$(database)/documents/app_config/access).data.get('testMode', false) || configuredSuper()
+          || (profile().get('isDemo', false) == true && request.auth.uid in get(/databases/$(database)/documents/app_config/access).data.get('allowedTestUids', [])));
+    }
+    function superAdmin() { return active() && configuredSuper(); }
+    function staff() { return active() && (profile().role in ['admin', 'team_lead'] || configuredSuper()); }
+    function board() { return staff() || (active() && exists(/databases/$(database)/documents/board_members/$(request.auth.uid))); }
+    function teamLead(m) {
+      return active() && profile().role in ['admin', 'team_lead']
+        && m.get('scope', '') == 'team' && profile().get('teamId', '') != ''
+        && profile().teamId == m.get('teamId', '')
+        && get(/databases/$(database)/documents/teams/$(profile().teamId)).data.get('leadUid', '') == request.auth.uid;
+    }
+    function documentLead() {
+      return active() && profile().get('documentLeadTeamId', '') != ''
+        && profile().get('isDocumentLead', false) == true
+        && get(/databases/$(database)/documents/teams/$(profile().documentLeadTeamId)).data.get('leadUid', '') == request.auth.uid
+        && (get(/databases/$(database)/documents/teams/$(profile().documentLeadTeamId)).data.get('isDocumentation', false) == true
+          || get(/databases/$(database)/documents/teams/$(profile().documentLeadTeamId)).data.get('name', '') == 'Documentation');
+    }
+    function memberOfTeam(m) {
+      return active() && profile().role in ['member', 'guest']
+        && m.get('scope', '') == 'team' && profile().get('teamId', '') != ''
+        && m.get('teamId', '') == profile().teamId
+        && m.get('audienceIds', []).hasAny(['team:' + profile().teamId]);
+    }
+    function joins(m) { return staff() || memberOfTeam(m); }
+    function readsTranscript(m) { return active() && (superAdmin() || documentLead() || (m.get('transcriptPublished', false) == true && board())); }
+    function readsMinutes(m) { return active() && staff(); }
+    function room(id) { return get(/databases/$(database)/documents/meeting_rooms/$(id)).data; }
+    function host(id) { return active() && room(id).hostUid == request.auth.uid && profile().role in ['admin', 'team_lead']; }
+    function live(id) { return room(id).status in ['scheduled', 'waiting', 'recording']; }
+    function manager(id) { return superAdmin() || host(id) || teamLead(room(id)); }
+    function safeForMember(m) {
+      return !m.keys().hasAny(['transcript', 'summary', 'decisions', 'actionItems', 'conclusion']);
+    }
+    function enters(id) {
+      return joins(room(id)) && live(id) && (staff() || host(id) || (
+        !(request.auth.uid in room(id).get('removed', [])) && !room(id).get('controls', {}).get('locked', false)
+        && (!room(id).get('controls', {}).get('waitingRoom', false)
+          || get(/databases/$(database)/documents/meetings/$(id)/waiting_lobby/$(request.auth.uid)).data.get('status', '') == 'admitted')));
+    }
+    function peerOwner(id, peer) { return get(/databases/$(database)/documents/meetings/$(id)/peers/$(peer)).data.uid == request.auth.uid; }
+    match /users/{uid} {
+      allow get: if signedIn() && (uid == request.auth.uid || staff());
+      allow list: if staff();
+      allow update: if active() && uid == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'photoURL']);
+      allow create, delete: if false;
+    }
+    match /teams/{id} { allow read: if staff(); allow write: if false; }
+    match /board_members/{id} { allow read: if staff(); allow write: if false; }
+    match /departments/{id} { allow read: if staff(); allow write: if false; }
+    match /app_config/{id} { allow read, write: if false; }
+    match /meeting_rooms/{id} {
+      allow read: if staff() || (joins(resource.data) && safeForMember(resource.data));
+      allow write: if false;
+    }
+    match /meetings/{id} {
+      allow read: if readsMinutes(resource.data) && (!resource.data.keys().hasAny(['transcript']) || resource.data.get('transcript', '') == '' || readsTranscript(resource.data));
+      allow write: if false;
+      match /peers/{peer} {
+        allow read: if enters(id) || host(id);
+        allow create: if enters(id) && request.resource.data.uid == request.auth.uid;
+        allow update: if (enters(id) && peerOwner(id, peer) && request.resource.data.uid == resource.data.uid)
+          || (host(id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cmd']));
+        allow delete: if active() && (peerOwner(id, peer) || manager(id));
+      }
+      match /signals/{signal} {
+        allow read: if enters(id);
+        allow create: if enters(id) && request.resource.data.uid == request.auth.uid && peerOwner(id, request.resource.data.sender);
+        allow delete: if active() && (resource.data.get('uid', '') == request.auth.uid || manager(id));
+      }
+      match /transcript_segments/{segment} {
+        // Live participants can read live captions; after the room is closed,
+        // only the Document Lead, Super Admins, and published audience remain.
+        allow read: if enters(id) || readsTranscript(room(id));
+        allow create: if enters(id) && room(id).get('controls', {}).get('transcriptPaused', false) == false
+          && request.resource.data.authorUid == request.auth.uid && request.resource.data.text is string
+          && request.resource.data.text.size() <= 20000;
+        allow update: if false;
+        allow delete: if manager(id);
+      }
+      match /private_transcript/{record} { allow read, write: if false; }
+      match /attendance/{record} {
+        allow read: if readsMinutes(room(id)) || enters(id);
+        allow create, update: if enters(id) && request.resource.data.uid == request.auth.uid;
+        allow delete: if manager(id);
+      }
+      match /chats/{chat} {
+        allow read: if enters(id) || readsMinutes(room(id));
+        allow create: if enters(id) && request.resource.data.authorUid == request.auth.uid;
+        allow update, delete: if manager(id);
+      }
+      match /whiteboard/{stroke} {
+        allow read: if enters(id);
+        allow create: if enters(id) && request.resource.data.authorUid == request.auth.uid && (!room(id).get('controls', {}).get('whiteboardHostOnly', false) || host(id));
+        allow delete: if enters(id) && (resource.data.authorUid == request.auth.uid || manager(id));
+      }
+      match /waiting_lobby/{uid} {
+        allow get: if active() && (uid == request.auth.uid || manager(id));
+        allow list: if manager(id);
+        allow create: if joins(room(id)) && live(id) && uid == request.auth.uid && request.resource.data.status == 'pending';
+        allow update: if manager(id) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+        allow delete: if active() && (uid == request.auth.uid || manager(id));
+      }
+    }
+    match /notifications/{uid}/items/{id} { allow read, write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

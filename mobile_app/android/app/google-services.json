@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "10573771159",
+    "project_id": "minutes-maker-1013",
+    "storage_bucket": "minutes-maker-1013.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:10573771159:android:c73664861816dc392454d2",
+        "android_client_info": {
+          "package_name": "com.example.mobile_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "10573771159-u57jh04un3pu7dv67hjqhm865o1iaun9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.mobile_app",
+            "certificate_hash": "1b4134576ca395fd46b0d2669be6cce74eca5bf8"
+          }
+        },
+        {
+          "client_id": "10573771159-c4h40rvhem280ehvookanm96jlfcj7ac.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4fa0_TGsGF4aPmDNcqjT7S65BP1uDh1A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "10573771159-c4h40rvhem280ehvookanm96jlfcj7ac.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "10573771159-kr06j9b6ti6r2sn97282b39aj116mjjv.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mobileApp.RunnerTests"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
