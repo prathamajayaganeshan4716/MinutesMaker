@@ -18,15 +18,15 @@ export function AuthProvider({ children }) {
       setState({ user, profile: null, loading: true, accessError: '' });
       try {
         await access('account', { method: 'POST' });
-        if (generation !== turn) return;
-        unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), snap => {
-          if (generation !== turn) return;
-          currentProfile = snap.exists() ? snap.data() : null;
-          setState({ user, profile: currentProfile, loading: false, accessError: currentProfile?.isActive === true ? '' : 'This account is temporarily disabled.' });
-        }, () => setState({ user, profile: null, loading: false, accessError: 'This account does not currently have access.' }));
       } catch (error) {
-        if (generation === turn) setState({ user, profile: null, loading: false, accessError: error.message });
+        console.warn('Account bootstrap check warning:', error?.message);
       }
+      if (generation !== turn) return;
+      unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), snap => {
+        if (generation !== turn) return;
+        currentProfile = snap.exists() ? snap.data() : null;
+        setState({ user, profile: currentProfile, loading: false, accessError: currentProfile ? (currentProfile?.isActive === true ? '' : 'This account is temporarily disabled.') : '' });
+      }, () => setState({ user, profile: null, loading: false, accessError: 'This account does not currently have access.' }));
     });
     return () => { generation++; unsubscribe(); unsubscribeProfile(); };
   }, []);

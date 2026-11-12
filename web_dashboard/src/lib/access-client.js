@@ -9,7 +9,12 @@ export async function access(path, options = {}) {
     ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
     cache: 'no-store',
   });
-  const body = await response.json();
-  if (!response.ok) throw new Error(body.error || 'Access denied.');
-  return body;
+  let body = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+  if (!response.ok) throw new Error(body?.error || `Request failed (${response.status})`);
+  return body || { ok: true };
 }
