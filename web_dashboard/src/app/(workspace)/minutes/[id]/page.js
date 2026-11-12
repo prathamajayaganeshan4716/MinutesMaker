@@ -168,57 +168,86 @@ export default function MinutesDetail() {
 
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-6 md:px-8 md:py-8">
-      <button onClick={() => router.back()} className="no-print mb-5 flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink">
-        <ArrowLeft size={16} /> Back
-      </button>
+      {/* Top action bar: Back link + Action buttons */}
+      <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-4">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink transition"
+        >
+          <ArrowLeft size={16} /> Back
+        </button>
 
-      <div className="flex flex-wrap items-start gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
-            <StatusPill status={m.status} />
-            {m.summarySource && <span className="text-xs text-muted">{m.summarySource === "huggingface" ? "AI summary · Hugging Face" : "Auto summary"}</span>}
-          </div>
-          <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-ink md:text-[34px]">{m.title || "Untitled meeting"}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
-            {created && <span>{created.toLocaleString([], { dateStyle: "full", timeStyle: "short" })}</span>}
-            {created && ended && <span>Duration {fmtDuration(ended - created)}</span>}
-            {m.hostName && <span>Host · {m.hostName}</span>}
-            <span>{lines.length} transcript lines</span>
-          </div>
-          {people(m).length > 0 && <div className="mt-3"><AvatarStack names={people(m)} max={8} /></div>}
-        </div>
-        <div className="no-print flex flex-wrap gap-2">
-          {(m.status === "recording" || m.status === "waiting") && <Link href={`/room/${id}`} className="btn btn-primary"><Video size={16} /> Rejoin</Link>}
+        <div className="flex flex-wrap items-center gap-2">
+          {(m.status === "recording" || m.status === "waiting") && (
+            <Link href={`/room/${id}`} className="btn btn-primary">
+              <Video size={16} /> Rejoin
+            </Link>
+          )}
           {canEdit && (
             <button className="btn btn-ghost" onClick={() => setEditingMeeting(true)}>
-              <Pencil size={16} /> Edit meeting
+              <Pencil size={15} /> Edit meeting
             </button>
           )}
-          {canEditDocument && (editDraft ? <>
-            <button className="btn btn-ghost" onClick={() => setMinutesDraft(null)} disabled={savingMinutes}>Cancel document edit</button>
-            <button className="btn btn-primary" onClick={saveMinutesDraft} disabled={savingMinutes}>{savingMinutes ? <Spinner size={15} /> : null} Save document</button>
-          </> : <button className="btn btn-ghost" onClick={beginMinutesEdit}><Pencil size={16} /> Edit document</button>)}
-          {privateTranscript.canEdit && transcriptDraft === null && <button className="btn btn-ghost" onClick={() => setTranscriptDraft(fullText)}><Pencil size={16} /> Edit transcript</button>}
-          {transcriptDraft !== null && <button className="btn btn-primary" onClick={saveTranscript} disabled={savingTranscript}>{savingTranscript ? 'Saving…' : 'Save transcript'}</button>}
-          {isSuper(profile) && !m.transcriptPublished && (privateTranscript.text || lines.length > 0) && <button className="btn btn-primary" onClick={publishTranscript}>Publish transcript</button>}
-          <button className="btn btn-ghost" onClick={copy}><Copy size={16} /> Copy</button>
-          <button className="btn btn-ghost" onClick={download}><Download size={16} /> .txt</button>
-          <button className="btn btn-ghost" onClick={() => {
-            try { printBoardMinutes(m, m.attendanceTracked === true ? attendanceRecords : null, fullText); }
-            catch (error) { toast(error.message, "error"); }
-          }}><Printer size={16} /> PDF</button>
-          {canEditDocument && <button className="btn btn-ghost" onClick={regenerate} disabled={busy || !lines.length}>{busy ? <Spinner size={15} /> : <RefreshCw size={16} />} Regenerate</button>}
+          {canEditDocument && (editDraft ? (
+            <>
+              <button className="btn btn-ghost" onClick={() => setMinutesDraft(null)} disabled={savingMinutes}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveMinutesDraft} disabled={savingMinutes}>
+                {savingMinutes ? <Spinner size={15} /> : null} Save document
+              </button>
+            </>
+          ) : (
+            <button className="btn btn-ghost" onClick={beginMinutesEdit}>
+              <Pencil size={15} /> Edit document
+            </button>
+          ))}
+          {privateTranscript.canEdit && transcriptDraft === null && (
+            <button className="btn btn-ghost" onClick={() => setTranscriptDraft(fullText)}>
+              <Pencil size={15} /> Edit transcript
+            </button>
+          )}
+          {transcriptDraft !== null && (
+            <button className="btn btn-primary" onClick={saveTranscript} disabled={savingTranscript}>
+              {savingTranscript ? 'Saving…' : 'Save transcript'}
+            </button>
+          )}
+          {isSuper(profile) && !m.transcriptPublished && (privateTranscript.text || lines.length > 0) && (
+            <button className="btn btn-primary" onClick={publishTranscript}>
+              Publish transcript
+            </button>
+          )}
+          <button className="btn btn-ghost" onClick={copy} title="Copy transcript">
+            <Copy size={15} /> Copy
+          </button>
+          <button className="btn btn-ghost" onClick={download} title="Download text">
+            <Download size={15} /> .txt
+          </button>
+          <button
+            className="btn btn-ghost"
+            onClick={() => {
+              try { printBoardMinutes(m, m.attendanceTracked === true ? attendanceRecords : null, fullText); }
+              catch (error) { toast(error.message, "error"); }
+            }}
+            title="Export PDF"
+          >
+            <Printer size={15} /> PDF
+          </button>
+          {canEditDocument && (
+            <button className="btn btn-ghost" onClick={regenerate} disabled={busy || !lines.length} title="Regenerate minutes with AI">
+              {busy ? <Spinner size={15} /> : <RefreshCw size={15} />} Regenerate
+            </button>
+          )}
           {canDelete && (
             <button
-              className="btn btn-ghost text-rec"
+              className="btn btn-ghost text-rec hover:bg-rec/10"
               disabled={!lines.length}
               onClick={async () => {
                 if (!confirm("Delete the entire transcript of this meeting? This can't be undone.")) return;
                 await deleteTranscript(id);
                 toast("Transcript deleted");
               }}
+              title="Delete transcript"
             >
-              <Trash2 size={16} /> Transcript
+              <Trash2 size={15} /> Transcript
             </button>
           )}
           {canDelete && (
@@ -235,10 +264,43 @@ export default function MinutesDetail() {
                 }
               }}
             >
-              <Trash2 size={16} /> Delete meeting
+              <Trash2 size={15} /> Delete meeting
             </button>
           )}
         </div>
+      </div>
+
+      {/* Meeting Title & Metadata Banner */}
+      <div className="mb-8 rounded-2xl border border-line bg-surface p-6 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusPill status={m.status} />
+          {m.summarySource && (
+            <span className="text-xs font-medium text-muted">
+              {m.summarySource === "huggingface" ? "AI summary · Hugging Face" : "Auto summary"}
+            </span>
+          )}
+        </div>
+
+        <h1 className="mt-3 font-display text-2xl font-extrabold tracking-tight text-ink sm:text-3xl md:text-[34px] break-words">
+          {m.title || "Untitled meeting"}
+        </h1>
+
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted">
+          {created && (
+            <span>
+              {created.toLocaleString([], { dateStyle: "full", timeStyle: "short" })}
+            </span>
+          )}
+          {created && ended && <span>• Duration {fmtDuration(ended - created)}</span>}
+          {m.hostName && <span>• Host: {m.hostName}</span>}
+          <span>• {lines.length} transcript lines</span>
+        </div>
+
+        {people(m).length > 0 && (
+          <div className="mt-4 border-t border-line/60 pt-4">
+            <AvatarStack names={people(m)} max={8} />
+          </div>
+        )}
       </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_400px]">
