@@ -156,9 +156,18 @@ async function handler(request, context) {
         for (const item of items.docs) {
           const meetingId = item.data().meetingId || item.id;
           if (pending.has(meetingId)) continue;
-          const m = await meeting(ctx, meetingId);
-          const transcript = await db.doc(`meetings/${m.id}/private_transcript/current`).get();
-          pending.set(meetingId, { id: m.id, title: m.title || 'Meeting', meetingCode: m.meetingCode || '', scope: m.scope || '', teamId: m.teamId || '', hostName: m.hostName || '', createdAt: m.createdAt || null, endedAt: m.endedAt || null, transcript: transcript.data()?.editedText || transcript.data()?.text || '' });
+          try {
+            const snap = await db.doc(`meetings/${meetingId}`).get();
+            if (!snap.exists) {
+              item.ref.set({ status: 'orphaned' }, { merge: true }).catch(() => {});
+              continue;
+            }
+            const m = { id: meetingId, ...snap.data() };
+            const transcript = await db.doc(`meetings/${m.id}/private_transcript/current`).get();
+            pending.set(meetingId, { id: m.id, title: m.title || 'Meeting', meetingCode: m.meetingCode || '', scope: m.scope || '', teamId: m.teamId || '', hostName: m.hostName || '', createdAt: m.createdAt || null, endedAt: m.endedAt || null, transcript: transcript.data()?.editedText || transcript.data()?.text || '' });
+          } catch (e) {
+            console.warn(`Could not load notification for meeting ${meetingId}:`, e?.message);
+          }
         }
       }
       return response({ notifications: [...pending.values()] });

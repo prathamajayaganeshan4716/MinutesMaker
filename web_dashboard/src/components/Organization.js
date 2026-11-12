@@ -137,7 +137,7 @@ function TeamCard({ team, members, users, actor, reload, onDelete }) {
 }
 function TranscriptApprovalQueue() {
   const [items, setItems] = useState([]); const [busy, setBusy] = useState(''); const toast = useToast();
-  const load = useCallback(async () => { try { const result = await access('notifications'); setItems(result.notifications || []); } catch (error) { toast(error.message, 'error'); } }, [toast]);
+  const load = useCallback(async () => { try { const result = await access('notifications'); setItems(result.notifications || []); } catch (error) { console.warn('Could not load transcript notifications:', error?.message); } }, []);
   useEffect(() => { load(); }, [load]);
   const publish = async item => {
     if (!confirm(`Publish the transcript for “${item.title}”? It will become visible to Admins and Board Members.`)) return;
